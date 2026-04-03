@@ -1,185 +1,693 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>极简贪吃蛇</title>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #2c3e50;
-            font-family: sans-serif;
-            color: #ecf0f1;
-        }
-        .score-container {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 20px;
-        }
-        #game-board {
-            position: relative;
-            background-color: #ecf0f1;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            overflow: hidden;
-        }
-        canvas {
-            display: block;
-        }
-        #menu {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(44, 62, 80, 0.85);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        #menu h1 { margin: 0 0 20px 0; color: #e74c3c; }
-        button {
-            padding: 12px 24px;
-            font-size: 18px;
-            background-color: #27ae60;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover { background-color: #2ecc71; }
-        .tips { margin-top: 15px; color: #bdc3c7; font-size: 14px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>字母贪吃蛇 - 多人对战</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root{
+  --bg:#0a0d12;--card:#111621;--bg2:#161c2a;--border:#1c2333;
+  --fg:#e2e8f0;--muted:#5a6578;--accent:#10b981;--accent-dim:rgba(16,185,129,.12);
+  --gold:#f59e0b;--gold-dim:rgba(245,158,11,.15);--danger:#ef4444;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:-25%;left:-10%;width:50vw;height:50vw;background:radial-gradient(circle,rgba(16,185,129,.035),transparent 70%);pointer-events:none}
+body::after{content:'';position:fixed;bottom:-20%;right:-8%;width:40vw;height:40vw;background:radial-gradient(circle,rgba(245,158,11,.025),transparent 70%);pointer-events:none}
+
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;transition:opacity .4s,visibility .4s}
+.screen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.35);position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(16,185,129,.25),transparent)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border:none;border-radius:11px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;outline:none;width:100%}
+.btn:focus-visible{box-shadow:0 0 0 3px var(--accent-dim)}
+.btn-p{background:var(--accent);color:#0a0d12;box-shadow:0 4px 16px rgba(16,185,129,.2)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(16,185,129,.35)}
+.btn-p:active{transform:translateY(0)}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.btn-g{background:transparent;color:var(--muted);border:1px solid var(--border);margin-top:8px}
+.btn-g:hover{border-color:var(--muted);color:var(--fg)}
+.btn-s{background:var(--bg2);color:var(--fg);border:1px solid var(--border);padding:8px 16px;width:auto;font-size:13px}
+.btn-s:hover{border-color:var(--accent);color:var(--accent)}
+.btn-d{background:transparent;color:var(--muted);border:none;padding:6px;font-size:14px;width:auto}
+.btn-d:hover{color:var(--danger)}
+
+/* 设置页 */
+.setup-card{width:460px;max-width:94vw}
+.setup-title{font-size:30px;font-weight:800;text-align:center;letter-spacing:-1px}
+.setup-title span{color:var(--accent)}
+.setup-sub{text-align:center;color:var(--muted);font-size:14px;margin:4px 0 24px}
+.player-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:280px;overflow-y:auto}
+.player-list::-webkit-scrollbar{width:4px}
+.player-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.player-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;transition:border-color .2s}
+.player-row:focus-within{border-color:var(--accent)}
+.p-dot{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.p-input{flex:1;background:transparent;border:none;color:var(--fg);font-family:inherit;font-size:14px;outline:none}
+.p-input::placeholder{color:var(--muted)}
+.p-num{font-size:12px;color:var(--muted);font-weight:600;min-width:18px}
+.add-hint{text-align:center;font-size:12px;color:var(--muted);margin-bottom:4px}
+.rules-box{margin-top:20px;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px}
+.rules-box h4{font-size:12px;font-weight:600;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.rules-box ul{list-style:none;font-size:12px;color:var(--muted);line-height:1.9}
+.rules-box li::before{content:'›';margin-right:5px;color:var(--accent);font-weight:700}
+
+/* 游戏容器 */
+#gameContainer{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:12px;z-index:5;transition:opacity .4s,visibility .4s}
+#gameContainer.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.g-top{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:480px}
+.g-player{display:flex;align-items:center;gap:8px}
+.g-player-dot{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
+.g-player-name{font-size:14px;font-weight:600}
+.g-player-round{font-size:11px;color:var(--muted)}
+.g-stats{display:flex;gap:16px}
+.g-stat-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted)}
+.g-stat-val{font-size:18px;font-weight:700;transition:transform .15s,color .15s}
+.g-stat-val.pop{transform:scale(1.3);color:var(--gold)}
+
+/* 单词进度 */
+.word-bar{display:flex;align-items:center;gap:4px;padding:7px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px}
+.wb-label{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-right:2px}
+.wb-cell{width:28px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:5px;font-size:14px;font-weight:700;border:1px solid var(--border);background:var(--bg);color:var(--muted);transition:all .3s}
+.wb-cell.done{background:var(--accent);color:#0a0d12;border-color:var(--accent)}
+.wb-cell.cur{border-color:var(--gold);color:var(--gold);animation:wpulse 1.2s ease-in-out infinite;box-shadow:0 0 10px var(--gold-dim)}
+@keyframes wpulse{0%,100%{box-shadow:0 0 8px var(--gold-dim)}50%{box-shadow:0 0 18px var(--gold-dim)}}
+
+/* 画布 */
+.canvas-wrap{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:0 8px 30px rgba(0,0,0,.3);background:var(--card)}
+canvas{display:block}
+
+/* 覆盖层 */
+.g-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,13,18,.82);backdrop-filter:blur(5px);z-index:5;transition:opacity .3s}
+.g-overlay.hidden{opacity:0;pointer-events:none}
+.countdown-num{font-size:96px;font-weight:800;color:var(--accent);line-height:1;animation:cPop .7s ease}
+@keyframes cPop{0%{transform:scale(.3);opacity:0}50%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+.cd-label{font-size:16px;font-weight:600;color:var(--fg);margin-bottom:20px}
+.cd-name{font-size:20px;font-weight:700;color:var(--gold);margin-bottom:6px}
+.cd-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+
+.re-icon{font-size:32px;color:var(--danger);margin-bottom:10px}
+.re-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.re-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.re-stats{display:flex;gap:12px;margin-bottom:20px}
+.re-stat{padding:12px 16px;background:var(--bg);border-radius:10px;border:1px solid var(--border);text-align:center;min-width:72px}
+.re-stat-v{font-size:20px;font-weight:700;color:var(--gold)}
+.re-stat-l{font-size:10px;color:var(--muted);margin-top:2px}
+.re-next{font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.re-next strong{color:var(--fg)}
+
+/* 暂停 */
+.pause-text{font-size:26px;font-weight:700}
+.pause-hint{font-size:13px;color:var(--muted);margin-top:6px}
+
+/* 操作提示 */
+.g-hint{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.ki{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--border);border-radius:4px;font-size:8px;background:var(--card);color:var(--muted)}
+
+/* 移动端 */
+.mob-ctrl{display:none;margin-top:2px}
+.dpad{display:grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px);gap:3px}
+.db{display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--muted);font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;transition:all .1s}
+.db:active{background:var(--accent);color:var(--bg);border-color:var(--accent);transform:scale(.9)}
+.db.empty{visibility:hidden}
+@media(max-width:540px){.mob-ctrl{display:block}.g-hint{display:none}}
+
+/* 结果页 */
+.result-card{width:520px;max-width:96vw;max-height:92vh;overflow-y:auto}
+.result-card::-webkit-scrollbar{width:4px}
+.result-card::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.res-header{text-align:center;margin-bottom:20px}
+.res-icon{font-size:36px;color:var(--gold);margin-bottom:10px}
+.res-title{font-size:24px;font-weight:700;margin-bottom:4px}
+.res-sub{font-size:13px;color:var(--muted)}
+
+/* 当前对局排名 */
+.lb-section{margin-bottom:20px}
+.lb-section-title{font-size:13px;font-weight:600;color:var(--fg);margin-bottom:10px;display:flex;align-items:center;gap:6px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.lb-section-title i{color:var(--gold);font-size:12px}
+.lb-row{display:grid;grid-template-columns:32px 1fr 72px 60px;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:4px;transition:background .2s}
+.lb-row.hl{background:var(--accent-dim)}
+.lb-rank{font-weight:700;font-size:14px;text-align:center;color:var(--muted)}
+.lb-row:nth-child(2) .lb-rank{color:var(--gold)}
+.lb-row:nth-child(3) .lb-rank{color:#94a3b8}
+.lb-row:nth-child(4) .lb-rank{color:#d97706}
+.lb-name{font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;overflow:hidden}
+.lb-name-dot{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0}
+.lb-sc{text-align:right;font-weight:700;font-size:15px;color:var(--gold)}
+.lb-wd{text-align:right;font-size:12px;color:var(--muted)}
+
+/* 历史记录 */
+.hist-row{display:grid;grid-template-columns:28px 1fr 64px 48px;align-items:center;gap:8px;padding:8px 12px;border-radius:6px;margin-bottom:3px;background:var(--bg);border:1px solid transparent}
+.hist-rank{font-weight:700;font-size:13px;text-align:center;color:var(--muted)}
+.hist-row:nth-child(1) .hist-rank{color:var(--gold)}
+.hist-row:nth-child(2) .hist-rank{color:#94a3b8}
+.hist-row:nth-child(3) .hist-rank{color:#d97706}
+.hist-name{font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist-sc{text-align:right;font-weight:700;font-size:13px;color:var(--gold)}
+.hist-wd{text-align:right;font-size:11px;color:var(--muted)}
+.hist-empty{text-align:center;color:var(--muted);font-size:12px;padding:16px}
+.res-btns{display:flex;flex-direction:column;gap:0}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .45s ease forwards;opacity:0}
+
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
 </head>
 <body>
 
-    <div class="score-container">当前分数: <span id="score">0</span></div>
-
-    <div id="game-board">
-        <canvas id="canvas" width="400" height="400"></canvas>
-        <div id="menu">
-            <h1 id="game-over-text" style="display: none;">游戏结束!</h1>
-            <button id="start-btn">开始游戏</button>
-        </div>
+<!-- ========== 设置页 ========== -->
+<div class="screen" id="setupScreen">
+  <div class="card setup-card">
+    <div class="setup-title"><span>S</span>pell Snake</div>
+    <div class="setup-sub">多人对战 · 吃字母拼单词</div>
+    <div class="player-list" id="playerList"></div>
+    <div class="add-hint" id="addHint"></div>
+    <button class="btn btn-s" id="addBtn" style="width:100%;margin-bottom:16px"><i class="fa-solid fa-plus"></i> 添加玩家</button>
+    <button class="btn btn-p" id="startBtn" disabled><i class="fa-solid fa-gamepad"></i> 开始对战</button>
+    <div class="rules-box">
+      <h4><i class="fa-solid fa-book-open"></i> 玩法说明</h4>
+      <ul>
+        <li>玩家轮流操控蛇吃字母，拼出目标单词</li>
+        <li>金色字母是正确的，灰色字母是干扰（吃到即结束）</li>
+        <li>撞墙或咬到自己也会结束本轮</li>
+        <li>所有人结束后比较分数，决出排名</li>
+      </ul>
     </div>
-    
-    <div class="tips">⌨️ 使用键盘方向键 (↑ ↓ ← →) 控制蛇的移动</div>
+  </div>
+</div>
 
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const menuEl = document.getElementById('menu');
-        const startBtn = document.getElementById('start-btn');
-        const gameOverText = document.getElementById('game-over-text');
+<!-- ========== 游戏容器 ========== -->
+<div id="gameContainer" class="hidden">
+  <div class="g-top">
+    <div class="g-player">
+      <div class="g-player-dot" id="gDot"></div>
+      <div>
+        <div class="g-player-name" id="gName"></div>
+        <div class="g-player-round" id="gRound"></div>
+      </div>
+    </div>
+    <div class="g-stats">
+      <div><div class="g-stat-label">分数</div><div class="g-stat-val" id="gScore">0</div></div>
+      <div><div class="g-stat-label">单词</div><div class="g-stat-val" id="gWords">0</div></div>
+    </div>
+  </div>
+  <div class="word-bar" id="wordBar"><span class="wb-label">目标</span></div>
+  <div class="canvas-wrap">
+    <canvas id="gameCanvas"></canvas>
+    <!-- 倒计时 -->
+    <div class="g-overlay hidden" id="readyOv">
+      <div class="cd-name" id="cdName"></div>
+      <div class="cd-label">准备开始</div>
+      <div class="countdown-num" id="cdNum">3</div>
+    </div>
+    <!-- 单轮结束 -->
+    <div class="g-overlay hidden" id="roundEndOv">
+      <div class="re-icon"><i class="fa-solid fa-flag-checkered"></i></div>
+      <div class="re-title" id="reTitle">本轮结束</div>
+      <div class="re-sub" id="reSub"></div>
+      <div class="re-stats" id="reStats"></div>
+      <div class="re-next" id="reNext"></div>
+      <button class="btn btn-p" id="reBtn" style="max-width:240px;margin:0 auto"></button>
+    </div>
+    <!-- 暂停 -->
+    <div class="g-overlay hidden" id="pauseOv">
+      <div class="pause-text">已暂停</div>
+      <div class="pause-hint">按空格键继续</div>
+    </div>
+  </div>
+  <div class="g-hint">
+    <span class="ki"><i class="fa-solid fa-arrow-up" style="font-size:7px"></i></span>
+    <span class="ki"><i class="fa-solid fa-arrow-down" style="font-size:7px"></i></span>
+    <span class="ki"><i class="fa-solid fa-arrow-left" style="font-size:7px"></i></span>
+    <span class="ki"><i class="fa-solid fa-arrow-right" style="font-size:7px"></i></span>
+    方向键移动 · 空格暂停
+  </div>
+  <div class="mob-ctrl">
+    <div class="dpad">
+      <div class="db empty"></div><div class="db" data-dir="up"><i class="fa-solid fa-chevron-up"></i></div><div class="db empty"></div>
+      <div class="db" data-dir="left"><i class="fa-solid fa-chevron-left"></i></div>
+      <div class="db" data-pause><i class="fa-solid fa-pause" id="mobPauseIcon"></i></div>
+      <div class="db" data-dir="right"><i class="fa-solid fa-chevron-right"></i></div>
+      <div class="db empty"></div><div class="db" data-dir="down"><i class="fa-solid fa-chevron-down"></i></div><div class="db empty"></div>
+    </div>
+  </div>
+</div>
 
-        const gridSize = 20;
-        const tileCount = canvas.width / gridSize;
-        
-        let snake = [];
-        let food = {};
-        let dx = 0;
-        let dy = 0;
-        let score = 0;
-        let gameInterval;
-        let changingDirection = false;
+<!-- ========== 结果页 ========== -->
+<div class="screen" id="resultScreen">
+  <div class="card result-card">
+    <div class="res-header">
+      <div class="res-icon"><i class="fa-solid fa-trophy"></i></div>
+      <div class="res-title">对战结束</div>
+      <div class="res-sub" id="resSub"></div>
+    </div>
+    <div class="lb-section">
+      <div class="lb-section-title"><i class="fa-solid fa-medal"></i> 本局排名</div>
+      <div id="currentLb"></div>
+    </div>
+    <div class="lb-section">
+      <div class="lb-section-title"><i class="fa-solid fa-clock-rotate-left"></i> 历史最佳</div>
+      <div id="histLb"></div>
+    </div>
+    <div class="res-btns">
+      <button class="btn btn-p" id="againBtn"><i class="fa-solid fa-rotate-right"></i> 再来一局</button>
+      <button class="btn btn-g" id="backBtn"><i class="fa-solid fa-users"></i> 重新组队</button>
+    </div>
+  </div>
+</div>
 
-        function resetGame() {
-            snake = [
-                {x: 10, y: 10},
-                {x: 10, y: 11},
-                {x: 10, y: 12}
-            ];
-            dx = 0;
-            dy = -1;
-            score = 0;
-            scoreEl.innerText = score;
-            spawnFood();
-            changingDirection = false;
-        }
+<script>
+(function(){
+  /* ==================== 配置 ==================== */
+  var CELL=24,COLS=20,ROWS=20,W=COLS*CELL,H=ROWS*CELL;
+  var BASE_SPD=135,MIN_SPD=65,SPD_STEP=3,WRONG_N=3;
 
-        function spawnFood() {
-            food = {
-                x: Math.floor(Math.random() * tileCount),
-                y: Math.floor(Math.random() * tileCount)
-            };
-            // 防止食物生成在蛇身上
-            for (let part of snake) {
-                if (part.x === food.x && part.y === food.y) return spawnFood();
-            }
-        }
+  var WORDS={
+    easy:['CAT','DOG','SUN','HAT','RUN','CUP','BIG','RED','FLY','MAP','PEN','BOX','FOX','JAM','NET','OWL','BEE','GEM','HOP','DIG'],
+    medium:['APPLE','HAPPY','WORLD','DREAM','LIGHT','SMILE','BEACH','MUSIC','STORM','CANDY','FLAME','GHOST','PIANO','SHARK','BRAVE'],
+    hard:['RAINBOW','ELEPHANT','COMPUTER','LANGUAGE','TREASURE','MIDNIGHT','DRAGON','THUNDER','DIAMOND','KINGDOM','JOURNEY','PENGUIN']
+  };
 
-        function drawGame() {
-            changingDirection = false;
-            
-            const head = { x: snake[0].x + dx, y: snake[0].y + dy };
-            
-            // 撞墙或撞自己检测
-            if (head.x < 0 || head.x >= tileCount || head.y < 0 || head.y >= tileCount || 
-                snake.some(part => part.x === head.x && part.y === head.y)) {
-                clearInterval(gameInterval);
-                menuEl.style.display = 'flex';
-                gameOverText.style.display = 'block';
-                startBtn.innerText = '重新开始';
-                return;
-            }
+  /* 玩家配色 */
+  var COLORS=[
+    {bg:'rgba(16,185,129,.15)',fg:'#10b981',bd:'rgba(16,185,129,.3)'},
+    {bg:'rgba(251,191,36,.15)',fg:'#fbbf24',bd:'rgba(251,191,36,.3)'},
+    {bg:'rgba(56,189,248,.15)', fg:'#38bdf8',bd:'rgba(56,189,248,.3)'},
+    {bg:'rgba(244,114,182,.15)',fg:'#f472b6',bd:'rgba(244,114,182,.3)'},
+    {bg:'rgba(167,139,250,.15)',fg:'#a78bfa',bd:'rgba(167,139,250,.3)'},
+    {bg:'rgba(251,146,60,.15)', fg:'#fb923c',bd:'rgba(251,146,60,.3)'}
+  ];
 
-            snake.unshift(head);
+  /* ==================== DOM ==================== */
+  var $=function(id){return document.getElementById(id)};
+  var setupScreen=$('setupScreen'),gameContainer=$('gameContainer'),resultScreen=$('resultScreen');
+  var playerListEl=$('playerList'),addHintEl=$('addHint'),addBtnEl=$('addBtn'),startBtnEl=$('startBtn');
+  var gDot=$('gDot'),gName=$('gName'),gRound=$('gRound'),gScoreEl=$('gScore'),gWordsEl=$('gWords');
+  var wordBarEl=$('wordBar'),canvas=$('gameCanvas'),ctx=canvas.getContext('2d');
+  var readyOv=$('readyOv'),cdName=$('cdName'),cdNum=$('cdNum');
+  var roundEndOv=$('roundEndOv'),reTitle=$('reTitle'),reSub=$('reSub'),reStats=$('reStats'),reNext=$('reNext'),reBtn=$('reBtn');
+  var pauseOv=$('pauseOv'),mobPauseIcon=$('mobPauseIcon');
+  var resSub=$('resSub'),currentLbEl=$('currentLb'),histLbEl=$('histLb');
+  var againBtn=$('againBtn'),backBtn=$('backBtn');
+  canvas.width=W;canvas.height=H;
 
-            // 吃食物检测
-            if (head.x === food.x && head.y === food.y) {
-                score += 10;
-                scoreEl.innerText = score;
-                spawnFood();
-            } else {
-                snake.pop();
-            }
+  /* ==================== 状态 ==================== */
+  var setupPlayers=[]; // [{name,id}]
+  var results=[];      // [{name,color,score,words,letters}]
+  var curIdx=0;
 
-            // 绘制背景
-            ctx.fillStyle = '#ecf0f1';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+  /* 游戏运行时状态 */
+  var snake=[],dir={x:1,y:0},nDir={x:1,y:0};
+  var foods=[],tWord='',tIdx=0;
+  var score=0,doneWords=0,doneLetters=0;
+  var running=false,paused=false,wComp=false;
+  var loop=null,speed=BASE_SPD;
+  var particles=[],raf=null;
+  var usedW={easy:new Set(),medium:new Set(),hard:new Set()};
+  var roundId=0;
+  var inputNames=[]; // 保存输入的名字，方便再来一局
 
-            // 绘制食物
-            ctx.fillStyle = '#e74c3c';
-            ctx.beginPath();
-            ctx.arc(food.x * gridSize + gridSize/2, food.y * gridSize + gridSize/2, gridSize/2 - 2, 0, Math.PI*2);
-            ctx.fill();
+  /* ==================== 工具 ==================== */
+  var rand=function(a,b){return Math.floor(Math.random()*(b-a+1))+a};
+  var pick=function(arr){return arr[rand(0,arr.length-1)]};
+  var fmt=function(n){return n.toLocaleString()};
+  function show(s){[setupScreen,gameContainer,resultScreen].forEach(function(v){v.classList.add('hidden')});s.classList.remove('hidden')}
+  function pop(el){el.classList.add('pop');setTimeout(function(){el.classList.remove('pop')},200)}
+  function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+  function initials(n){return n.length>=2?n.slice(-2):n}
 
-            // 绘制蛇
-            snake.forEach((part, index) => {
-                ctx.fillStyle = index === 0 ? '#27ae60' : '#2ecc71';
-                ctx.fillRect(part.x * gridSize + 1, part.y * gridSize + 1, gridSize - 2, gridSize - 2);
-            });
-        }
+  /* 圆角矩形 */
+  function rr(x,y,w,h,r){
+    r=Math.min(r,w/2,h/2);ctx.beginPath();
+    ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+  }
 
-        window.addEventListener('keydown', e => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-                e.preventDefault();
-            }
-            if (changingDirection) return;
-            
-            const goingUp = dy === -1;
-            const goingDown = dy === 1;
-            const goingRight = dx === 1;
-            const goingLeft = dx === -1;
+  /* ==================== 设置页逻辑 ==================== */
+  function renderSetup(){
+    playerListEl.innerHTML='';
+    setupPlayers.forEach(function(p,i){
+      var c=COLORS[i];
+      var row=document.createElement('div');
+      row.className='player-row';
+      row.innerHTML='<div class="p-dot" style="background:'+c.bg+';color:'+c.fg+'">'+(i+1)+'</div>'
+        +'<span class="p-num">#'+(i+1)+'</span>'
+        +'<input class="p-input" type="text" placeholder="输入名字" maxlength="8" value="'+esc(p.name)+'" data-idx="'+i+'">'
+        +(setupPlayers.length>2?'<button class="btn-d" data-del="'+i+'"><i class="fa-solid fa-xmark"></i></button>':'');
+      playerListEl.appendChild(row);
+    });
+    /* 绑定事件 */
+    playerListEl.querySelectorAll('.p-input').forEach(function(inp){
+      inp.addEventListener('input',function(){
+        setupPlayers[+this.dataset.idx].name=this.value.trim();
+        validateSetup();
+      });
+    });
+    playerListEl.querySelectorAll('[data-del]').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        setupPlayers.splice(+this.dataset.del,1);
+        renderSetup();validateSetup();
+      });
+    });
+    var maxed=setupPlayers.length>=6;
+    addBtnEl.style.display=maxed?'none':'flex';
+    addHintEl.textContent=maxed?'最多 6 名玩家':'';
+    validateSetup();
+  }
+  function validateSetup(){
+    var ok=setupPlayers.length>=2&&setupPlayers.every(function(p){return p.name.length>0});
+    startBtnEl.disabled=!ok;
+  }
 
-            if (e.key === 'ArrowLeft' && !goingRight) { dx = -1; dy = 0; changingDirection = true; }
-            if (e.key === 'ArrowUp' && !goingDown) { dx = 0; dy = -1; changingDirection = true; }
-            if (e.key === 'ArrowRight' && !goingLeft) { dx = 1; dy = 0; changingDirection = true; }
-            if (e.key === 'ArrowDown' && !goingUp) { dx = 0; dy = 1; changingDirection = true; }
-        });
+  addBtnEl.addEventListener('click',function(){
+    if(setupPlayers.length>=6)return;
+    setupPlayers.push({name:'',id:Date.now()+Math.random()});
+    renderSetup();
+    /* 聚焦新输入框 */
+    var inputs=playerListEl.querySelectorAll('.p-input');
+    if(inputs.length)inputs[inputs.length-1].focus();
+  });
+  startBtnEl.addEventListener('click',function(){
+    inputNames=setupPlayers.map(function(p){return p.name});
+    results=[];
+    curIdx=0;
+    roundId=Date.now();
+    show(gameContainer);
+    startCountdown();
+  });
 
-        startBtn.addEventListener('click', () => {
-            menuEl.style.display = 'none';
-            resetGame();
-            if (gameInterval) clearInterval(gameInterval);
-            gameInterval = setInterval(drawGame, 100);
-        });
-    </script>
+  /* 默认两个玩家 */
+  setupPlayers=[{name:'',id:1},{name:'',id:2}];
+  renderSetup();
+
+  /* ==================== 倒计时 ==================== */
+  function startCountdown(){
+    var p=setupPlayers[curIdx],c=COLORS[curIdx];
+    cdName.textContent=p.name;
+    cdName.style.color=c.fg;
+    cdNum.textContent='3';
+    cdNum.style.animation='none';
+    void cdNum.offsetWidth;
+    cdNum.style.animation='cPop .7s ease';
+    readyOv.classList.remove('hidden');
+    roundEndOv.classList.add('hidden');
+    pauseOv.classList.add('hidden');
+    updatePlayerUI();
+    var count=3;
+    var timer=setInterval(function(){
+      count--;
+      if(count<=0){
+        clearInterval(timer);
+        readyOv.classList.add('hidden');
+        beginRound();
+      }else{
+        cdNum.textContent=String(count);
+        cdNum.style.animation='none';void cdNum.offsetWidth;cdNum.style.animation='cPop .7s ease';
+      }
+    },800);
+  }
+
+  function updatePlayerUI(){
+    var p=setupPlayers[curIdx],c=COLORS[curIdx];
+    gDot.style.background=c.bg;gDot.style.color=c.fg;gDot.textContent=initials(p.name);
+    gName.textContent=p.name;gName.style.color=c.fg;
+    gRound.textContent='第 '+(curIdx+1)+' / '+setupPlayers.length+' 位';
+  }
+
+  /* ==================== 游戏逻辑 ==================== */
+  function beginRound(){
+    var sx=Math.floor(COLS/4),sy=Math.floor(ROWS/2);
+    snake=[{x:sx,y:sy},{x:sx-1,y:sy},{x:sx-2,y:sy}];
+    dir={x:1,y:0};nDir={x:1,y:0};
+    score=0;doneWords=0;doneLetters=0;speed=BASE_SPD;
+    particles=[];paused=false;wComp=false;
+    usedW={easy:new Set(),medium:new Set(),hard:new Set()};
+    foods=[];tWord='';tIdx=0;
+    gScoreEl.textContent='0';gWordsEl.textContent='0';
+    newWord();
+    running=true;
+    loop=setInterval(tick,speed);
+  }
+
+  function pickWord(){
+    var pool=doneWords<3?'easy':doneWords<6?'medium':'hard';
+    var list=WORDS[pool].filter(function(w){return!usedW[pool].has(w)});
+    if(!list.length){usedW[pool].clear();return pick(WORDS[pool])}
+    var w=pick(list);usedW[pool].add(w);return w;
+  }
+  function newWord(){
+    tWord=pickWord();tIdx=0;foods=genFoods();renderWordBar();
+  }
+  function renderWordBar(){
+    var h='<span class="wb-label">目标</span>';
+    for(var i=0;i<tWord.length;i++){
+      var cls=i<tIdx?'done':i===tIdx?'cur':'';
+      h+='<div class="wb-cell '+cls+'">'+tWord[i]+'</div>';
+    }
+    wordBarEl.innerHTML=h;
+  }
+
+  function findEmpty(extra){
+    var occ={};
+    snake.forEach(function(s){occ[s.x+','+s.y]=1});
+    (extra||[]).forEach(function(f){occ[f.x+','+f.y]=1});
+    var p,t=0;
+    do{p={x:rand(0,COLS-1),y:rand(0,ROWS-1)};t++}while(occ[p.x+','+p.y]&&t<500);
+    return p;
+  }
+  function genFoods(){
+    var fs=[],tl=tWord[tIdx];
+    var p1=findEmpty(fs);
+    fs.push({x:p1.x,y:p1.y,letter:tl,correct:true});
+    for(var i=0;i<WRONG_N;i++){
+      var p,wl,t=0;
+      do{p=findEmpty(fs);wl=String.fromCharCode(65+rand(0,25));t++}
+      while((fs.some(function(f){return f.x===p.x&&f.y===p.y})||wl===tl)&&t<200);
+      fs.push({x:p.x,y:p.y,letter:wl,correct:false});
+    }
+    return fs;
+  }
+
+  function emit(x,y,c1,c2,n){
+    var cx=x*CELL+CELL/2,cy=y*CELL+CELL/2;
+    for(var i=0;i<(n||10);i++){
+      var a=Math.PI*2*i/(n||10)+Math.random()*.5,sp=1.5+Math.random()*2.5;
+      particles.push({x:cx,y:cy,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,decay:.025+Math.random()*.025,size:2+Math.random()*3,color:Math.random()>.5?c1:c2});
+    }
+  }
+
+  function tick(){
+    if(paused||wComp)return;
+    dir={x:nDir.x,y:nDir.y};
+    var head=snake[0],nh={x:head.x+dir.x,y:head.y+dir.y};
+    /* 碰墙 */
+    if(nh.x<0||nh.x>=COLS||nh.y<0||nh.y>=ROWS){endRound();return}
+    /* 碰自身 */
+    for(var i=0;i<snake.length;i++){if(snake[i].x===nh.x&&snake[i].y===nh.y){endRound();return}}
+    snake.unshift(nh);
+    var eaten=null;
+    for(var j=0;j<foods.length;j++){if(foods[j].x===nh.x&&foods[j].y===nh.y){eaten=foods[j];break}}
+    if(eaten){
+      if(eaten.correct){
+        score+=10;doneLetters++;gScoreEl.textContent=score;pop(gScoreEl);
+        emit(eaten.x,eaten.y,'#10b981','#34d399');
+        tIdx++;renderWordBar();
+        if(tIdx>=tWord.length){
+          wComp=true;
+          var bonus=20+doneWords*5;score+=bonus;doneWords++;
+          gScoreEl.textContent=score;gWordsEl.textContent=doneWords;pop(gScoreEl);pop(gWordsEl);
+          /* 撒花 */
+          for(var k=0;k<4;k++)emit(rand(2,COLS-3),rand(2,ROWS-3),'#f59e0b','#10b981',6);
+          setTimeout(function(){wComp=false;newWord()},1000);
+        }else{foods=genFoods()}
+        speed=Math.max(MIN_SPD,speed-SPD_STEP);
+        clearInterval(loop);loop=setInterval(tick,speed);
+      }else{
+        emit(eaten.x,eaten.y,'#ef4444','#f97316',14);
+        snake.pop();endRound();return;
+      }
+    }else{snake.pop()}
+  }
+
+  function endRound(){
+    running=false;clearInterval(loop);
+    var p=setupPlayers[curIdx];
+    results.push({name:p.name,color:COLORS[curIdx],score:score,words:doneWords,letters:doneLetters});
+    /* 显示单轮结束覆盖 */
+    var isWrong=foods.some(function(f){return f.x===snake[0].x&&f.y===snake[0].y&&!f.correct});
+    reTitle.textContent=isWrong?'吃错字母':'本轮结束';
+    reSub.textContent=p.name+' 的回合结束';
+    reStats.innerHTML='<div class="re-stat"><div class="re-stat-v">'+score+'</div><div class="re-stat-l">分数</div></div>'
+      +'<div class="re-stat"><div class="re-stat-v">'+doneWords+'</div><div class="re-stat-l">单词</div></div>'
+      +'<div class="re-stat"><div class="re-stat-v">'+doneLetters+'</div><div class="re-stat-l">字母</div></div>';
+    var hasMore=curIdx<setupPlayers.length-1;
+    if(hasMore){
+      var np=setupPlayers[curIdx+1],nc=COLORS[curIdx+1];
+      reNext.innerHTML='下一位：<strong style="color:'+nc.fg+'">'+np.name+'</strong>';
+      reBtn.innerHTML='<i class="fa-solid fa-arrow-right"></i> 下一位';
+      reBtn.onclick=function(){curIdx++;startCountdown()};
+    }else{
+      reNext.innerHTML='所有人已完成';
+      reBtn.innerHTML='<i class="fa-solid fa-trophy"></i> 查看排行榜';
+      reBtn.onclick=function(){showResults()};
+    }
+    setTimeout(function(){roundEndOv.classList.remove('hidden')},350);
+  }
+
+  /* ==================== 排行榜 ==================== */
+  function showResults(){
+    saveHist();
+    /* 按分数排序 */
+    var sorted=results.slice().sort(function(a,b){return b.score-a.score});
+    resSub.textContent=sorted.length+' 人参赛 · 冠军 '+sorted[0].name;
+    /* 本局排名 */
+    var h='';
+    sorted.forEach(function(r,i){
+      var c=r.color;
+      h+='<div class="lb-row anim" style="animation-delay:'+(i*0.06)+'s">'
+        +'<div class="lb-rank">'+(i+1)+'</div>'
+        +'<div class="lb-name"><div class="lb-name-dot" style="background:'+c.bg+';color:'+c.fg+'">'+initials(r.name)+'</div>'+esc(r.name)+'</div>'
+        +'<div class="lb-sc">'+fmt(r.score)+'</div>'
+        +'<div class="lb-wd">'+r.words+'词</div></div>';
+    });
+    currentLbEl.innerHTML=h;
+    /* 历史记录 */
+    var hist=getHist();
+    if(!hist.length){histLbEl.innerHTML='<div class="hist-empty">暂无历史记录</div>'}
+    else{
+      var hh='';
+      hist.slice(0,10).forEach(function(e,i){
+        hh+='<div class="hist-row anim" style="animation-delay:'+(0.3+i*0.04)+'s">'
+          +'<div class="hist-rank">'+(i+1)+'</div>'
+          +'<div class="hist-name">'+esc(e.name)+'</div>'
+          +'<div class="hist-sc">'+fmt(e.score)+'</div>'
+          +'<div class="hist-wd">'+e.words+'词</div></div>';
+      });
+      histLbEl.innerHTML=hh;
+    }
+    show(resultScreen);
+  }
+
+  function getHist(){try{return JSON.parse(localStorage.getItem('spell_snake_hist')||'[]')}catch(e){return[]}}
+  function saveHist(){
+    var hist=getHist();
+    results.forEach(function(r){hist.push({name:r.name,score:r.score,words:r.words,time:Date.now(),rid:roundId})});
+    hist.sort(function(a,b){return b.score-a.score});
+    if(hist.length>50)hist.length=50;
+    localStorage.setItem('spell_snake_hist',JSON.stringify(hist));
+  }
+
+  againBtn.addEventListener('click',function(){
+    /* 同一组人再来一局 */
+    setupPlayers=inputNames.map(function(n,i){return{name:n,id:Date.now()+i}});
+    results=[];curIdx=0;roundId=Date.now();
+    show(gameContainer);startCountdown();
+  });
+  backBtn.addEventListener('click',function(){
+    setupPlayers=inputNames.map(function(n,i){return{name:n,id:Date.now()+i}});
+    renderSetup();show(setupScreen);
+  });
+
+  /* ==================== 渲染循环 ==================== */
+  function render(){
+    raf=requestAnimationFrame(render);
+    ctx.clearRect(0,0,W,H);
+    /* 网格 */
+    ctx.strokeStyle='rgba(28,35,51,.3)';ctx.lineWidth=.5;
+    for(var x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,H);ctx.stroke()}
+    for(var y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(W,y*CELL);ctx.stroke()}
+
+    /* 字母食物 */
+    var now=Date.now();
+    foods.forEach(function(f){
+      var px=f.x*CELL,py=f.y*CELL,cx=px+CELL/2,cy=py+CELL/2,ins=2;
+      if(f.correct){
+        var gr=CELL*.9+Math.sin(now/600)*2;
+        var g=ctx.createRadialGradient(cx,cy,0,cx,cy,gr);
+        g.addColorStop(0,'rgba(245,158,11,0.3)');g.addColorStop(1,'rgba(245,158,11,0)');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,gr,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(245,158,11,0.12)';rr(px+ins,py+ins,CELL-ins*2,CELL-ins*2,5);ctx.fill();
+        ctx.strokeStyle='rgba(245,158,11,0.55)';ctx.lineWidth=1.5;rr(px+ins,py+ins,CELL-ins*2,CELL-ins*2,5);ctx.stroke();
+        ctx.fillStyle='#f59e0b';ctx.font='700 15px "Space Grotesk",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(f.letter,cx,cy+1);
+      }else{
+        ctx.fillStyle='rgba(71,85,105,0.15)';rr(px+ins,py+ins,CELL-ins*2,CELL-ins*2,5);ctx.fill();
+        ctx.strokeStyle='rgba(71,85,105,0.22)';ctx.lineWidth=1;rr(px+ins,py+ins,CELL-ins*2,CELL-ins*2,5);ctx.stroke();
+        ctx.fillStyle='#475569';ctx.font='600 14px "Space Grotesk",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(f.letter,cx,cy+1);
+      }
+    });
+
+    /* 蛇 */
+    var len=snake.length;
+    for(var i=len-1;i>=0;i--){
+      var seg=snake[i],t=1-(i/Math.max(len,1));
+      var px2=seg.x*CELL,py2=seg.y*CELL,ins2=i===0?1:2,rad2=i===0?6:4;
+      var gv=Math.round(130+t*100),bv=Math.round(70+t*59);
+      ctx.fillStyle='rgb(16,'+gv+','+bv+')';
+      rr(px2+ins2,py2+ins2,CELL-ins2*2,CELL-ins2*2,rad2);ctx.fill();
+      if(i===0){
+        var hg=ctx.createRadialGradient(px2+CELL/2,py2+CELL/2,0,px2+CELL/2,py2+CELL/2,CELL*.7);
+        hg.addColorStop(0,'rgba(16,185,129,0.12)');hg.addColorStop(1,'rgba(16,185,129,0)');
+        ctx.fillStyle=hg;ctx.beginPath();ctx.arc(px2+CELL/2,py2+CELL/2,CELL*.7,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#0a0d12';
+        var ccx=px2+CELL/2,ccy=py2+CELL/2,e1x,e1y,e2x,e2y;
+        if(dir.x===1){e1x=ccx+4;e1y=ccy-4;e2x=ccx+4;e2y=ccy+4}
+        else if(dir.x===-1){e1x=ccx-4;e1y=ccy-4;e2x=ccx-4;e2y=ccy+4}
+        else if(dir.y===-1){e1x=ccx-4;e1y=ccy-4;e2x=ccx+4;e2y=ccy-4}
+        else{e1x=ccx-4;e1y=ccy+4;e2x=ccx+4;e2y=ccy+4}
+        ctx.beginPath();ctx.arc(e1x,e1y,2.2,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(e2x,e2y,2.2,0,Math.PI*2);ctx.fill();
+      }
+    }
+
+    /* 粒子 */
+    for(var i=particles.length-1;i>=0;i--){
+      var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.95;p.vy*=.95;p.life-=p.decay;
+      if(p.life<=0){particles.splice(i,1);continue}
+      ctx.globalAlpha=p.life;ctx.fillStyle=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,Math.max(.5,p.size*p.life),0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    /* 暂停覆盖 */
+    if(paused&&running){
+      ctx.fillStyle='rgba(10,13,18,.72)';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#e2e8f0';ctx.font='700 26px "Space Grotesk",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('已暂停',W/2,H/2-10);
+      ctx.font='400 13px "Space Grotesk",sans-serif';ctx.fillStyle='#5a6578';
+      ctx.fillText('按空格继续',W/2,H/2+16);
+    }
+  }
+  render();
+
+  /* ==================== 输入 ==================== */
+  var dirMap={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}};
+  var mDirMap={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+  function setDir(d){if(d.x===-dir.x&&d.y===-dir.y)return;nDir={x:d.x,y:d.y}}
+
+  document.addEventListener('keydown',function(e){
+    if(setupScreen.classList.contains('hidden')&&resultScreen.classList.contains('hidden')){
+      if(dirMap[e.key]){e.preventDefault();if(running&&!paused&&!wComp)setDir(dirMap[e.key])}
+      if(e.key===' '){e.preventDefault();if(running){paused=!paused;mobPauseIcon.className=paused?'fa-solid fa-play':'fa-solid fa-pause';pauseOv.classList.toggle('hidden',!paused)}}
+    }
+  });
+  document.querySelectorAll('[data-dir]').forEach(function(b){
+    var fn=function(){var d=mDirMap[b.dataset.dir];if(d&&running&&!paused&&!wComp)setDir(d)};
+    b.addEventListener('touchstart',function(e){e.preventDefault();fn()});
+    b.addEventListener('click',fn);
+  });
+  document.querySelector('[data-pause]').addEventListener('click',function(){
+    if(running){paused=!paused;mobPauseIcon.className=paused?'fa-solid fa-play':'fa-solid fa-pause';pauseOv.classList.toggle('hidden',!paused)}
+  });
+})();
+</script>
 </body>
 </html>
